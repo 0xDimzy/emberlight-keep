@@ -5,7 +5,7 @@
 // frame. The win pilot builds strong; the lose pilot builds almost nothing,
 // so the Glooms overrun the Keep on purpose.
 import { TOWER_TYPES } from './config.js';
-import { isBuildable, placeTower, PHASE_LOSE, PHASE_PLAY, PHASE_WIN, startGame, startWave, stepWorld } from './world.js';
+import { isBuildable, placeTower, PHASE_LOSE, PHASE_PLAY, PHASE_WIN, startGame, startWave, stepWorld, upgradeTowerAt } from './world.js';
 import { SCREEN_LOSE, SCREEN_PLAY, SCREEN_TITLE, SCREEN_WIN } from './render.js';
 
 const STEP = 1 / 60;
@@ -54,9 +54,16 @@ function stageStart(world) {
 function stagePlay(world) {
   startGame(world);
   buildLayout(world, STRONG_LAYOUT);
+  // Two genuine one-click upgrades, so the level pips show in the shot.
+  upgradeTowerAt(world, 9, 0);
+  upgradeTowerAt(world, 10, 0);
   world.gold = 180;
-  // Play into wave 4 and stop mid-fight, towers firing, HUD full.
-  runUntil(world, 400, (w) => w.wave >= 4 && w.enemies.length >= 3);
+  // Play into wave 6 and stop mid-fight: enemies strung along the whole
+  // path, projectiles in the air, towers firing, HUD full. The lead Gloom
+  // must have marched 500px in, so the pack is spread along the road and
+  // not bunched at the gate.
+  runUntil(world, 400, (w) => w.wave >= 6 && w.enemies.length >= 6
+    && w.enemies.some((e) => e.pathDist > 500));
   return SCREEN_PLAY;
 }
 

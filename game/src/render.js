@@ -151,23 +151,34 @@ function drawTower(ctx, tower) {
   ctx.arc(tower.x, tower.y, 24, 0, Math.PI * 2);
   ctx.stroke();
   ctx.globalAlpha = 1;
+  // Level pips: one gold dot per upgrade level, under the tower.
+  for (let i = 0; i < tower.level; i += 1) {
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath();
+    ctx.arc(tower.x + (i - (tower.level - 1) / 2) * 10, tower.y + 30, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawEnemy(ctx, world, enemy) {
   const wob = Math.sin(world.time * enemy.wobbleSpeed + enemy.wobble) * 4;
   const x = enemy.x;
   const y = enemy.y + wob;
-  // Shadow body.
-  ctx.fillStyle = enemy.boss ? '#3b0764' : '#1e1b4b';
+  // Shadow body — a Dart Wisp is teal and small, a Brute Wisp dark red and
+  // big, a plain Gloom indigo; the boss stays purple.
+  const body = enemy.boss ? '#3b0764' : enemy.kind === 'dart' ? '#134e4a' : enemy.kind === 'brute' ? '#7f1d1d' : '#1e1b4b';
+  const inner = enemy.boss ? '#7e22ce' : enemy.kind === 'dart' ? '#2dd4bf' : enemy.kind === 'brute' ? '#b91c1c' : '#4c1d95';
+  const eyes = enemy.boss ? '#f43f5e' : enemy.kind === 'dart' ? '#99f6e4' : enemy.kind === 'brute' ? '#fca5a5' : '#facc15';
+  ctx.fillStyle = body;
   ctx.beginPath();
   ctx.arc(x, y, enemy.radius, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = enemy.boss ? '#7e22ce' : '#4c1d95';
+  ctx.fillStyle = inner;
   ctx.beginPath();
   ctx.arc(x, y - 3, enemy.radius * 0.72, 0, Math.PI * 2);
   ctx.fill();
   // Glowing eyes.
-  ctx.fillStyle = enemy.boss ? '#f43f5e' : '#facc15';
+  ctx.fillStyle = eyes;
   ctx.beginPath();
   ctx.arc(x - 6, y - 4, 3.2, 0, Math.PI * 2);
   ctx.arc(x + 6, y - 4, 3.2, 0, Math.PI * 2);
@@ -192,6 +203,11 @@ function drawEnemy(ctx, world, enemy) {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('DREAD WISP', x, y - enemy.radius - 16);
+  } else if (enemy.kind === 'brute') {
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('BRUTE', x, y - enemy.radius - 16);
   }
 }
 
@@ -332,6 +348,7 @@ function drawShop(ctx, world) {
   ctx.font = '13px sans-serif';
   const lines = [
     'Controls: 1/2/3 pick tower',
+    'Click a tower to upgrade it.',
     'Space = next wave • R = restart',
     'P = pause • M = mute sound',
     `Sound: ${isMuted() ? 'OFF' : 'ON'}`,

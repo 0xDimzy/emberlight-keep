@@ -4,15 +4,19 @@ import { KILL_GOLD, WAVE_HP_BASE, WAVE_HP_GROWTH, WAVE_SPEED_BASE, WAVE_SPEED_GR
 
 let nextId = 1;
 
-export function makeEnemy(wave, rng, boss) {
+export function makeEnemy(wave, rng, boss, kind) {
   const hpScale = Math.pow(WAVE_HP_GROWTH, wave - 1);
   const hp = boss ? 900 + wave * 60 : Math.round(WAVE_HP_BASE * hpScale);
   const speed = boss
     ? WAVE_SPEED_BASE * 0.7
     : WAVE_SPEED_BASE * Math.pow(WAVE_SPEED_GROWTH, wave - 1) * (0.9 + rng() * 0.2);
-  return {
+  // kind: 'gloom' (the default shadow wisp), 'dart' (fast, frail) or
+  // 'brute' (slow, tough, hits the Keep for 2). Bosses ignore kind.
+  const k = boss ? 'gloom' : (kind || 'gloom');
+  const enemy = {
     id: nextId += 1,
     boss: !!boss,
+    kind: k,
     x: -40,
     y: 64 + 1 * 80 + 40,
     hp,
@@ -31,6 +35,24 @@ export function makeEnemy(wave, rng, boss) {
     wobble: rng() * Math.PI * 2,
     wobbleSpeed: 2 + rng() * 2,
   };
+  if (k === 'dart') {
+    enemy.hp = Math.max(1, Math.round(hp * 0.55));
+    enemy.maxHp = enemy.hp;
+    enemy.speed *= 1.75;
+    enemy.baseSpeed = enemy.speed;
+    enemy.radius = 11;
+    enemy.wobbleSpeed = 4 + rng() * 2;
+  } else if (k === 'brute') {
+    enemy.hp = Math.round(hp * 2.6);
+    enemy.maxHp = enemy.hp;
+    enemy.speed *= 0.6;
+    enemy.baseSpeed = enemy.speed;
+    enemy.radius = 22;
+    enemy.reward = KILL_GOLD + 6 + Math.floor(wave / 3);
+    enemy.keepDamage = 2;
+    enemy.wobbleSpeed = 1 + rng();
+  }
+  return enemy;
 }
 
 // A frost hit chills the enemy: it moves slower until the chill wears off.

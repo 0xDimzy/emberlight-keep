@@ -15,8 +15,19 @@ export function spawnInterval(wave) {
 export function buildWave(wave, rng) {
   const count = waveSize(wave);
   const queue = [];
-  for (let i = 0; i < count; i += 1) queue.push({ boss: false });
-  if (wave === TOTAL_WAVES) queue.push({ boss: true });
+  for (let i = 0; i < count; i += 1) {
+    // From wave 3, every 4th spawn is a fast Dart Wisp; from wave 5, every
+    // 6th is a tough Brute Wisp (brute wins when the two collide).
+    let kind = 'gloom';
+    if (wave >= 5 && (i + 1) % 6 === 0) kind = 'brute';
+    else if (wave >= 3 && (i + 1) % 4 === 0) kind = 'dart';
+    queue.push({ boss: false, kind });
+  }
+  if (wave === TOTAL_WAVES) {
+    queue.push({ boss: false, kind: 'brute' });
+    queue.push({ boss: false, kind: 'brute' });
+    queue.push({ boss: true, kind: 'gloom' });
+  }
   return { wave, queue, spawnTimer: 0.4, interval: spawnInterval(wave) };
 }
 

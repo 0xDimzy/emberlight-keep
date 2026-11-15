@@ -2,7 +2,7 @@
 // keyboard wiring, and the ?shot= hook the screenshots are taken through.
 import { VIEW_H, VIEW_W } from './config.js';
 import { seedFromUrl } from './rng.js';
-import { createWorld, placeTower, resetWorld, startGame, startWave, stepWorld } from './world.js';
+import { createWorld, placeTower, resetWorld, startGame, startWave, stepWorld, upgradeTowerAt } from './world.js';
 import { drawWorld, SCREEN_LOSE, SCREEN_PLAY, SCREEN_TITLE, SCREEN_WIN } from './render.js';
 import { canvasPoint, hudButtons, KEY_SELECT, overlayButton, pointInRect, pointToCell, shopCardRect } from './input.js';
 import { sfx, toggleMute } from './audio.js';
@@ -95,9 +95,18 @@ canvas.addEventListener('click', (event) => {
     world.messageTimer = 1.5;
     sfx.error();
   } else if (reason === 'occupied') {
-    world.message = 'A tower already stands there.';
-    world.messageTimer = 1.5;
-    sfx.error();
+    // Clicking a tower that stands there upgrades it instead of erroring.
+    const up = upgradeTowerAt(world, cell.col, cell.row);
+    if (up === 'not-enough-gold') {
+      world.message = 'Not enough gold to upgrade!';
+      world.messageTimer = 1.5;
+      sfx.error();
+    } else if (up === 'max-level') {
+      world.message = 'Tower is already max level.';
+      world.messageTimer = 1.5;
+      sfx.error();
+    }
+    // Success leaves the upgrade message upgradeTowerAt set behind.
   }
 });
 

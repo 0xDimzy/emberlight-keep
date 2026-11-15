@@ -12,14 +12,43 @@ export function makeTower(type, col, row) {
     angle: -Math.PI / 2,
     shotsFired: 0,
     kills: 0,
+    level: 1,
+    boost: { dmg: 1, range: 0, rate: 1 },
   };
 }
 
 export function towerSpec(type) { return TOWER_TYPES[type]; }
 
+// The spec a tower actually fights with: base stats bent by its upgrades.
+export function effSpec(tower) {
+  const spec = TOWER_TYPES[tower.type];
+  return {
+    ...spec,
+    damage: spec.damage * tower.boost.dmg,
+    range: spec.range + tower.boost.range,
+    rate: spec.rate * tower.boost.rate,
+  };
+}
+
+// Gold to buy the next level: 60% of the tower's build cost, each time.
+export function upgradeCost(tower) {
+  return Math.round(TOWER_TYPES[tower.type].cost * 0.6);
+}
+
+// Raise a tower one level (max 3): harder hits, longer reach, faster fire.
+// Returns false when the tower is already at max level.
+export function applyUpgrade(tower) {
+  if (tower.level >= 3) return false;
+  tower.level += 1;
+  tower.boost.dmg *= 1.6;
+  tower.boost.range += 15;
+  tower.boost.rate *= 1.15;
+  return true;
+}
+
 // Cheapest-first range test: is the enemy inside this tower's circle?
 export function inRange(tower, enemy) {
-  const spec = TOWER_TYPES[tower.type];
+  const spec = effSpec(tower);
   const dx = enemy.x - tower.x;
   const dy = enemy.y - tower.y;
   return dx * dx + dy * dy <= spec.range * spec.range;
@@ -42,7 +71,7 @@ export function towerTick(tower, enemies, dt) {
   const target = pickTarget(tower, enemies);
   if (target) {
     tower.angle = Math.atan2(target.y - tower.y, target.x - tower.x);
-    const spec = TOWER_TYPES[tower.type];
+    const spec = effSpec(tower);
     if (tower.cooldown <= 0) {
       tower.cooldown = 1 / spec.rate;
       tower.shotsFired += 1;
@@ -53,7 +82,9 @@ export function towerTick(tower, enemies, dt) {
 }
 
 // A shot leaves its tower toward the spot its target stood when fired.
+// It carries the firing tower's upgraded damage and splash with it.
 export function fireShot(tower, target, kind) {
+  const eff = effSpec(tower);
   return {
     kind,
     x: tower.x,
@@ -61,6 +92,8 @@ export function fireShot(tower, target, kind) {
     tx: target.x,
     ty: target.y,
     target,
+    damage: eff.damage,
+    splash: eff.splash,
     speed: kind === 'ember' ? 320 : 520,
     alive: true,
   };

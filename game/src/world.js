@@ -8,7 +8,7 @@ import {
 import { makeRng } from './rng.js';
 import { applySlow, damageEnemy, makeEnemy, moveEnemy } from './enemies.js';
 import { buildWave } from './waves.js';
-import { fireShot, makeTower, moveShots, towerTick } from './towers.js';
+import { applyUpgrade, fireShot, makeTower, moveShots, towerTick, upgradeCost } from './towers.js';
 import { sfx } from './audio.js';
 
 export const PHASE_TITLE = 'title';
@@ -98,8 +98,24 @@ export function placeTower(world, col, row) {
   return null;
 }
 
-export function startWave(world) {
-  if (world.phase !== PHASE_PLAY || world.waveActive) return false;
+// Upgrade the tower standing on a cell, one click, one level. Returns a
+// short reason when refused, null when the upgrade went through.
+export function upgradeTowerAt(world, col, row) {
+  if (world.phase !== PHASE_PLAY) return 'not-playing';
+  const tower = world.towers.find((t) => t.col === col && t.row === row);
+  if (!tower) return null;
+  if (tower.level >= 3) return 'max-level';
+  const cost = upgradeCost(tower);
+  if (world.gold < cost) return 'not-enough-gold';
+  world.gold -= cost;
+  applyUpgrade(tower);
+  sfx.place();
+  world.message = `Upgraded ${TOWER_TYPES[tower.type].name} to Lv${tower.level}!`;
+  world.messageTimer = 2;
+  return null;
+}
+
+export function startWave(world) {  if (world.phase !== PHASE_PLAY || world.waveActive) return false;
   if (world.wave >= TOTAL_WAVES) return false;
   world.wave += 1;
   world.waveQueue = buildWave(world.wave, world.rng);
@@ -153,12 +169,12 @@ function resolveShotHit(world, shot, enemy) {
     for (const other of world.enemies) {
       if (!other.alive) continue;
       const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
-      if (d <= spec.splash && damageEnemy(other, spec.damage)) onKill(world, other);
+      if (d <= shot.splash && damageEnemy(other, shot.damage)) onKill(world, other);
     }
     return;
   }
   if (shot.kind === 'frost') applySlow(enemy, spec.slow, spec.slowSecs);
-  if (damageEnemy(enemy, spec.damage)) onKill(world, enemy);
+  if (damageEnemy(enemy, shot.damage)) onKill(world, enemy);
 }
 
 // One fixed step of the simulation. Returns EVENT_WIN / EVENT_LOSE / EVENT_NONE.
@@ -172,7 +188,7 @@ export function stepWorld(world, dt) {
     world.waveQueue.spawnTimer -= dt;
     if (world.waveQueue.spawnTimer <= 0 && world.waveQueue.queue.length > 0) {
       const next = world.waveQueue.queue.shift();
-      world.enemies.push(makeEnemy(world.wave, world.rng, next.boss));
+      world.enemies.push(makeEnemy(world.wave, world.rng, next.boss, next.kind));
       world.waveQueue.spawnTimer = world.waveQueue.interval;
     }
   }
